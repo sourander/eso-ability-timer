@@ -9,9 +9,15 @@ import datetime
 ap = argparse.ArgumentParser()
 ap.add_argument('--debug', action='store_true', 
     help='Use video file instead of ffmpeg steam data.')
+ap.add_argument('--fullscreen', action='store_true', 
+    help='Launch in full screen. Your monitor should have Full HD display resolution.')
 args = vars(ap.parse_args())
 
-SKILLS_BEING_TRACKED = {'images/cropped/ArrowBarrage.png': 10.0}
+SKILLS_BEING_TRACKED = {'images/cropped/ArrowBarrage.png': 10.0,
+                        'images/cropped/UnstableWallOfElements.png': 10.0,
+                        'images/cropped/ChanneledAcceleration.png': 36.0}
+
+LONG_SKILLS = ['images/cropped/ChanneledAcceleration.png']
 
 def skill_locations():
     # Set values from ESO UI. Offset is 64x64 box's width plus the 10px margin.
@@ -44,13 +50,21 @@ def blackmagic_image():
     return image
 
 
-def compare_icons(skill_coords, image, query_icon):
+def crop_ability_icons(skill_coords, image):
+    bm_crops = []
+
     for i in skill_coords.keys():
         (yStart, yEnd, xStart, xEnd) = skill_coords[i]
         crop = image[yStart:yEnd, xStart:xEnd]
         _,_,crop = cv2.split(crop)
-        ss = ssim(crop, query_icon)
-        if ss > 0.90:
+        bm_crops.append(crop)
+
+    return bm_crops
+
+def compare_icons(bm_icons, query_icon):
+    for i, icon in enumerate(bm_icons, 1):
+        ss = ssim(icon, query_icon)
+        if ss > 0.85:
             return i
     return None
 
@@ -60,7 +74,7 @@ def load_query_icons():
     query_paths = []
 
     # Load all images from images/cropped/ and store them in lists
-    for path in paths.list_images("images"):
+    for path in paths.list_images("images/cropped/"):
         
         # Fetch only the queries that user wants
         if path not in SKILLS_BEING_TRACKED:
@@ -100,63 +114,77 @@ if __name__ == "__main__":
     # Dictionary for skills[i] = (yStart, yEnd, xStart, xEnd)
     skill_coords = skill_locations()
 
-    # This will be removed at some point
-    timeremaining = 0.0
-    index = 1
-    filenumber = 1
+    # This will be removed at some point if I end up using a Graphbar Class
+    timeremaining_top = 0.0
+    timeremaining_bottom = 0.0
+    upper_skill_duration = 0.0
+    lower_skill_duration = 0.0
+
+    if args['fullscreen']:
+        cv2.namedWindow('frame', cv2.WINDOW_FREERATIO)
+        cv2.setWindowProperty('frame', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
     # Main loop
     while True:
-        # Index number for saving PNG/JPEG sequences
-        index += 1
-
         # Get time for deltaTime calculations
         start = datetime.datetime.now()
 
         # Get a single frame from capture card
         bm_capture = blackmagic_image()
 
+        bm_icons = crop_ability_icons(skill_coords, bm_capture)
+
         # Load query icons and their relative paths
         query_icons, query_paths = load_query_icons()
-
 
         # Loop queries and compare those to the icons in the image stream.
         for query_icon, query_path in zip(query_icons, query_paths):
 
             # Fetch the id [1-5] of a slotted skill that has ss < threshold.
-            matched_idx = compare_icons(skill_coords, bm_capture, query_icon)
+            matched_idx = compare_icons(bm_icons, query_icon)
 
             if matched_idx is not None:
-                print("{} DETECTED at slot {}! ALARM! PANIC!".format(query_path, matched_idx))
-                timeremaining = SKILLS_BEING_TRACKED[query_path]
+                if query_path in LONG_SKILLS:
+                    timeremaining_bottom = SKILLS_BEING_TRACKED[query_path]
+                    lower_skill_duration = SKILLS_BEING_TRACKED[query_path]
 
-                """
-                Pseudo-code-thinking:
-
-                if query_path in SKILLS_FOR_TIMER_ONE
-                    timer_one_remaining = SKILLS_BEING_TRACKED['query_path']
-                elif query path in SKILLS_FOR_TIMER_TWO
-                    timer_two_remaining = 
-                """
+                else:
+                    timeremaining_top = SKILLS_BEING_TRACKED[query_path]
+                    upper_skill_duration = SKILLS_BEING_TRACKED[query_path]
 
 
-        # Display
+
+        # Display 
         if bm_capture is not None:
-            if timeremaining > 0:
-                bar_lenght = int(600 * (timeremaining * 0.1))
-                cv2.rectangle(bm_capture, 
-                    (660, 820),
-                    (1260, 825),
-                    (255,255,255), thickness=1)
-                cv2.rectangle(bm_capture, 
-                    (660, 820),
-                    (660+bar_lenght, 825),
-                    (255,255,255), thickness=-1)
-            cv2.imshow('Video', bm_capture)
             
-            if index > 60 and (index % 2) == 0:
-                filenumber += 1
-                cv2.imwrite('output-jpeg/sequence_%03d.jpeg' % filenumber, bm_capture)
+            # Generate the top bar graph
+            if timeremaining_top > 0:
+                up_bar_lenght = int(600 * (timeremaining_top / upper_skill_duration))
+                cv2.rectangle(bm_capture, 
+                    (660, 815),
+                    (1260, 820),
+                    (255,255,255), thickness=1)
+                
+                cv2.rectangle(bm_capture, 
+                    (660, 815),
+                    (660+up_bar_lenght, 820),
+                    (255,255,255), thickness=-1)
+            
+            # Generate the bottom bar graph
+            if timeremaining_bottom > 0:
+                low_bar_lenght = int(600 * (timeremaining_bottom / lower_skill_duration))
+                cv2.rectangle(bm_capture, 
+                    (660, 835),
+                    (1260, 840),
+                    (0,255,255), thickness=1)
+                cv2.rectangle(bm_capture, 
+                    (660, 835),
+                    (660+low_bar_lenght, 840),
+                    (0,255,255), thickness=-1)
+            
+            # Draw image on screen
+            cv2.imshow('frame', bm_capture)
+            
         
         # Exit if Q has been pressed
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -166,8 +194,11 @@ if __name__ == "__main__":
         # Check how many seconds did the processing take
         deltaTime = (datetime.datetime.now() - start).total_seconds()
 
-        if timeremaining > 0:
-            timeremaining -= deltaTime
+        if timeremaining_top > 0:
+            timeremaining_top -= deltaTime
+
+        if timeremaining_bottom > 0:
+            timeremaining_bottom -= deltaTime
 
         # Empty pipe read
         pipe.stdout.flush()
