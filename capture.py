@@ -9,17 +9,18 @@ import argparse
 import datetime
 
 ap = argparse.ArgumentParser()
-ap.add_argument('--debug', action='store_true', 
-    help='Use video file instead of ffmpeg steam data.')
+ap.add_argument('--nographics', action='store_true', 
+    help='Toggle the ability bars off. Just display the raw image.')
 ap.add_argument('--fullscreen', action='store_true', 
     help='Launch in full screen. Your monitor should have Full HD display resolution.')
 args = vars(ap.parse_args())
 
 SKILLS_BEING_TRACKED = {'images/cropped/ArrowBarrage.png': 10.0,
                         'images/cropped/UnstableWallOfElements.png': 10.0,
-                        'images/cropped/ChanneledAcceleration.png': 36.0}
+                        'images/cropped/ChanneledAcceleration.png': 36.0,
+                        'images/cropped/BarbedTrap.png': 18.0}
 
-LONG_SKILLS = ['images/cropped/ChanneledAcceleration.png']
+LONG_SKILLS = ['images/cropped/ChanneledAcceleration.png', 'images/cropped/BarbedTrap.png']
 
 def skill_locations():
     # Set values from ESO UI. Offset is 64x64 box's width plus the 10px margin.
@@ -94,31 +95,31 @@ def load_query_icons():
 
 if __name__ == "__main__":
 
-    # Launch ffmpeg and pipe the rawdata
-    if not args['debug']:
-        FFMPEG_BIN = "ffmpeg"
-        command = [ FFMPEG_BIN,
-            '-hide_banner',
-            '-loglevel','warning',
-            '-raw_format','bgra',
-            '-channels','2',
-            '-format_code','Hp59',
-            '-f','decklink',
-            '-i', 'Intensity Pro 4K',
-            '-pix_fmt', 'bgr24',
-            '-vcodec', 'rawvideo',
-            '-an','-sn',
-            '-f', 'image2pipe', '-'] 
+    # Launch FFMPEG with Blackmagic settings    
+    FFMPEG_BIN = "ffmpeg"
+    command = [ FFMPEG_BIN,
+        '-hide_banner',
+        '-loglevel','warning',
+        '-raw_format','bgra',
+        '-format_code','Hp59',
+        '-f','decklink',
+        '-i', 'Intensity Pro 4K',
+        '-pix_fmt', 'bgr24',
+        '-vcodec', 'rawvideo',
+        '-an','-sn',
+        '-f', 'image2pipe', '-'] 
 
-        # Get data from ffmpeg pipe    
-        pipe = sp.Popen(command, stdout = sp.PIPE, bufsize=10**8)
+    # Get data from ffmpeg pipe    
+    pipe = sp.Popen(command, stdout = sp.PIPE, bufsize=10**8)
 
-    # Dictionary for skills[i] = (yStart, yEnd, xStart, xEnd)
-    skill_coords = skill_locations()
+    # Instansiate classes and important variables
+    if not args['nographics']:
+        # Dictionary for skills[i] = (yStart, yEnd, xStart, xEnd)
+        skill_coords = skill_locations()
 
-    # Instanciate ability bars.
-    upperbar = AbilityBar()
-    lowerbar = LongAbilityBar()
+        # Instanciate ability bars.
+        upperbar = AbilityBar()
+        lowerbar = LongAbilityBar()
 
     if args['fullscreen']:
         cv2.namedWindow('frame', cv2.WINDOW_FREERATIO)
@@ -126,63 +127,82 @@ if __name__ == "__main__":
 
     # Main loop
     while True:
-        # Get time for deltaTime calculations
-        start = datetime.datetime.now()
+        
+        """
+        LOAD IMAGES
+        """
+
+        if not args['nographics']:
+            # Get time for deltaTime calculations
+            start = datetime.datetime.now()
 
         # Get a single frame from capture card
         bm_capture = blackmagic_image()
 
-        bm_icons = crop_ability_icons(skill_coords, bm_capture)
 
-        # Load query icons and their relative paths
-        query_icons, query_paths = load_query_icons()
+        # Crop icons and compare those to the saved images.
+        # Unless --nographics parameter has been used
+        if not args['nographics']:
+            bm_icons = crop_ability_icons(skill_coords, bm_capture)
 
-        # Loop queries and compare those to the icons in the image stream.
-        for query_icon, query_path in zip(query_icons, query_paths):
+            # Load query icons and their relative paths
+            query_icons, query_paths = load_query_icons()
 
-            # Fetch the id [1-5] of a slotted skill that has ss < threshold.
-            matched_idx = compare_icons(bm_icons, query_icon)
+            # Loop queries and compare those to the icons in the image stream.
+            for query_icon, query_path in zip(query_icons, query_paths):
 
-            if matched_idx is not None:
-                if query_path in LONG_SKILLS:
-                    lowerbar.set_timer(query_path, matched_idx, SKILLS_BEING_TRACKED[query_path])
-                else:
-                    upperbar.set_timer(query_path, matched_idx, SKILLS_BEING_TRACKED[query_path])
+                # Fetch the id [1-5] of a slotted skill that has ss < threshold.
+                matched_idx = compare_icons(bm_icons, query_icon)
+
+                if matched_idx is not None:
+                    if query_path in LONG_SKILLS:
+                        lowerbar.set_timer(query_path, matched_idx, SKILLS_BEING_TRACKED[query_path])
+                    else:
+                        upperbar.set_timer(query_path, matched_idx, SKILLS_BEING_TRACKED[query_path])
 
 
+        """
+        DISPLAY IMAGES
+        """
 
-        # Display 
         if bm_capture is not None:
-            
-            if upperbar.active():
-                bm_capture = upperbar.draw_bar(bm_capture)
 
-            if lowerbar.active():
-                bm_capture = lowerbar.draw_bar(bm_capture, flicker=True)
+            # Update graphics bars
+            # Unless --nographics parameter has been used
+            if not args['nographics']:
+                if upperbar.active():
+                    bm_capture = upperbar.draw_bar(bm_capture)
+
+                if lowerbar.active():
+                    bm_capture = lowerbar.draw_bar(bm_capture, flicker=True)
 
             
             # Draw image on screen
             cv2.imshow('frame', bm_capture)
             
-        
+        # Empty pipe read
+        pipe.stdout.flush()
+
         # Exit if Q has been pressed
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
+        """
+        UPDATE TIMERS
+        """
 
-        # Check how many seconds did the processing take
-        deltaTime = (datetime.datetime.now() - start).total_seconds()
-
-
-        # Reduce the deltaTime from any active ability timers
-        if upperbar.active():
-            upperbar.reduce_time(deltaTime)
-
-        if lowerbar.active():
-            lowerbar.reduce_time(deltaTime)
+        if not args['nographics']:
+            # Check how many seconds did the processing take
+            deltaTime = (datetime.datetime.now() - start).total_seconds()
 
 
-        # Empty pipe read
-        pipe.stdout.flush()
+            # Reduce the deltaTime from any active ability timers
+            if upperbar.active():
+                upperbar.reduce_time(deltaTime)
+
+            if lowerbar.active():
+                lowerbar.reduce_time(deltaTime)
+
+
 
     cv2.destroyAllWindows()
