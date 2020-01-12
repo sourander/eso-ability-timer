@@ -19,12 +19,15 @@ class AbilityBar():
         self.endXY = (1260, 820)
 
     def set_timer(self, path, index, duration):
-
-        self.skillDuration = duration
         
-        self.skillPath = path
+        if self.skillDuration is None:
+            self.skillDuration = duration
+        
+        if self.skillPath is None:
+            self.skillPath = path
 
-        self.skillIndex = index
+        if self.skillPath is None:
+            self.skillIndex = index
         
         self.timeremaining = duration
 
