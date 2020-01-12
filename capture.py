@@ -1,5 +1,7 @@
 from skimage.metrics import structural_similarity as ssim
 from imutils import paths
+from helpers.abilitybar import AbilityBar
+from helpers.abilitybar import LongAbilityBar
 import subprocess as sp
 import cv2
 import numpy
@@ -114,11 +116,9 @@ if __name__ == "__main__":
     # Dictionary for skills[i] = (yStart, yEnd, xStart, xEnd)
     skill_coords = skill_locations()
 
-    # This will be removed at some point if I end up using a Graphbar Class
-    timeremaining_top = 0.0
-    timeremaining_bottom = 0.0
-    upper_skill_duration = 0.0
-    lower_skill_duration = 0.0
+    # Instanciate ability bars.
+    upperbar = AbilityBar()
+    lowerbar = LongAbilityBar()
 
     if args['fullscreen']:
         cv2.namedWindow('frame', cv2.WINDOW_FREERATIO)
@@ -145,48 +145,21 @@ if __name__ == "__main__":
 
             if matched_idx is not None:
                 if query_path in LONG_SKILLS:
-                    timeremaining_bottom = SKILLS_BEING_TRACKED[query_path]
-                    lower_skill_duration = SKILLS_BEING_TRACKED[query_path]
-
+                    lowerbar.set_timer(query_path, matched_idx, SKILLS_BEING_TRACKED[query_path])
                 else:
-                    timeremaining_top = SKILLS_BEING_TRACKED[query_path]
-                    upper_skill_duration = SKILLS_BEING_TRACKED[query_path]
+                    upperbar.set_timer(query_path, matched_idx, SKILLS_BEING_TRACKED[query_path])
 
 
 
         # Display 
         if bm_capture is not None:
             
-            # Generate the top bar graph
-            if timeremaining_top > 0:
-                up_bar_lenght = int(600 * (timeremaining_top / upper_skill_duration))
-                cv2.rectangle(bm_capture, 
-                    (660, 815),
-                    (1260, 820),
-                    (255,255,255), thickness=1)
-                
-                cv2.rectangle(bm_capture, 
-                    (660, 815),
-                    (660+up_bar_lenght, 820),
-                    (255,255,255), thickness=-1)
-            
-            # Generate the bottom bar graph
-            if timeremaining_bottom > 0:
-                low_bar_lenght = int(600 * (timeremaining_bottom / lower_skill_duration))
+            if upperbar.active():
+                bm_capture = upperbar.draw_bar(bm_capture)
 
-                if low_bar_lenght < 150 and (low_bar_lenght % 10) is 0:
-                    color = (0,0,255)
-                else:
-                    color = (0,255,255)
+            if lowerbar.active():
+                bm_capture = lowerbar.draw_bar(bm_capture, flicker=True)
 
-                cv2.rectangle(bm_capture, 
-                    (660, 835),
-                    (1260, 840),
-                    (0,255,255), thickness=1)
-                cv2.rectangle(bm_capture, 
-                    (660, 835),
-                    (660+low_bar_lenght, 840),
-                    color, thickness=-1)
             
             # Draw image on screen
             cv2.imshow('frame', bm_capture)
@@ -200,11 +173,14 @@ if __name__ == "__main__":
         # Check how many seconds did the processing take
         deltaTime = (datetime.datetime.now() - start).total_seconds()
 
-        if timeremaining_top > 0:
-            timeremaining_top -= deltaTime
 
-        if timeremaining_bottom > 0:
-            timeremaining_bottom -= deltaTime
+        # Reduce the deltaTime from any active ability timers
+        if upperbar.active():
+            upperbar.reduce_time(deltaTime)
+
+        if lowerbar.active():
+            lowerbar.reduce_time(deltaTime)
+
 
         # Empty pipe read
         pipe.stdout.flush()
