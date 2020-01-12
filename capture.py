@@ -74,7 +74,7 @@ def crop_ability_icons(skill_coords, image):
 def compare_icons(bm_icons, query_icon):
     for i, icon in enumerate(bm_icons, 1):
         ss = ssim(icon, query_icon)
-        if ss > 0.85:
+        if ss > 0.80:
             return i
     return None
 
@@ -125,8 +125,8 @@ if __name__ == "__main__":
         lowerbar = LongAbilityBar()
 
     if args['fullscreen']:
-        cv2.namedWindow('frame', cv2.WINDOW_FREERATIO)
-        cv2.setWindowProperty('frame', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        cv2.namedWindow('ElderSCrollsOnline', cv2.WINDOW_FREERATIO)
+        cv2.setWindowProperty('ElderSCrollsOnline', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
     # Main loop
     while True:
@@ -139,7 +139,7 @@ if __name__ == "__main__":
             # Get time for deltaTime calculations
             start = datetime.datetime.now()
 
-        # Get a single frame from capture card
+        # Get a single ElderSCrollsOnline from capture card
         bm_capture = blackmagic_image()
 
         # Empty pipe read
@@ -184,7 +184,7 @@ if __name__ == "__main__":
 
             
             # Draw image on screen
-            cv2.imshow('frame', bm_capture)
+            cv2.imshow('ElderSCrollsOnline', bm_capture)
             
         # Exit if Q has been pressed
         if cv2.waitKey(1) & 0xFF == ord('q'):
