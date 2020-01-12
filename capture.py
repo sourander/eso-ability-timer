@@ -173,6 +173,12 @@ if __name__ == "__main__":
             # Generate the bottom bar graph
             if timeremaining_bottom > 0:
                 low_bar_lenght = int(600 * (timeremaining_bottom / lower_skill_duration))
+
+                if low_bar_lenght < 150 and (low_bar_lenght % 10) is 0:
+                    color = (0,0,255)
+                else:
+                    color = (0,255,255)
+
                 cv2.rectangle(bm_capture, 
                     (660, 835),
                     (1260, 840),
@@ -180,7 +186,7 @@ if __name__ == "__main__":
                 cv2.rectangle(bm_capture, 
                     (660, 835),
                     (660+low_bar_lenght, 840),
-                    (0,255,255), thickness=-1)
+                    color, thickness=-1)
             
             # Draw image on screen
             cv2.imshow('frame', bm_capture)
