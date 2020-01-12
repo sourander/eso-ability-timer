@@ -9,18 +9,25 @@ import argparse
 import datetime
 
 ap = argparse.ArgumentParser()
+ap.add_argument("-p", "--profile", required=True, 
+    help='Choose your profile. Available: StamDK, MagPlar') 
 ap.add_argument('--nographics', action='store_true', 
     help='Toggle the ability bars off. Just display the raw image.')
 ap.add_argument('--fullscreen', action='store_true', 
     help='Launch in full screen. Your monitor should have Full HD display resolution.')
 args = vars(ap.parse_args())
 
-SKILLS_BEING_TRACKED = {'images/cropped/ArrowBarrage.png': 10.0,
-                        'images/cropped/UnstableWallOfElements.png': 10.0,
-                        'images/cropped/ChanneledAcceleration.png': 36.0,
-                        'images/cropped/BarbedTrap.png': 18.0}
+if args["profile"] == "StamDK":
+    SKILLS_BEING_TRACKED = {'images/cropped/ArrowBarrage.png': 10.0,
+                            'images/cropped/BarbedTrap.png': 18.0}
 
-LONG_SKILLS = ['images/cropped/ChanneledAcceleration.png', 'images/cropped/BarbedTrap.png']
+    LONG_SKILLS = ['images/cropped/BarbedTrap.png']
+
+elif args["profile"] == "MagPlar":
+    SKILLS_BEING_TRACKED = {'images/cropped/UnstableWallOfElements.png': 10.0,
+                            'images/cropped/ChanneledAcceleration.png': 36.0}
+
+    LONG_SKILLS = ['images/cropped/ChanneledAcceleration.png']
 
 def skill_locations():
     # Set values from ESO UI. Offset is 64x64 box's width plus the 10px margin.
@@ -77,12 +84,8 @@ def load_query_icons():
     query_paths = []
 
     # Load all images from images/cropped/ and store them in lists
-    for path in paths.list_images("images/cropped/"):
+    for path in SKILLS_BEING_TRACKED.keys():
         
-        # Fetch only the queries that user wants
-        if path not in SKILLS_BEING_TRACKED:
-            continue
-
         # Load image and keep only Red channel
         query_icon = cv2.imread(path)
         _,_,query_icon = cv2.split(query_icon)
@@ -110,7 +113,7 @@ if __name__ == "__main__":
         '-f', 'image2pipe', '-'] 
 
     # Get data from ffmpeg pipe    
-    pipe = sp.Popen(command, stdout = sp.PIPE, bufsize=10**8)
+    pipe = sp.Popen(command, stdout = sp.PIPE, bufsize=-1)
 
     # Instansiate classes and important variables
     if not args['nographics']:
@@ -138,6 +141,9 @@ if __name__ == "__main__":
 
         # Get a single frame from capture card
         bm_capture = blackmagic_image()
+
+        # Empty pipe read
+        pipe.stdout.flush()
 
 
         # Crop icons and compare those to the saved images.
@@ -180,9 +186,6 @@ if __name__ == "__main__":
             # Draw image on screen
             cv2.imshow('frame', bm_capture)
             
-        # Empty pipe read
-        pipe.stdout.flush()
-
         # Exit if Q has been pressed
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
@@ -204,5 +207,6 @@ if __name__ == "__main__":
                 lowerbar.reduce_time(deltaTime)
 
 
-
+    # Empty pipe read
+    pipe.stdout.flush()
     cv2.destroyAllWindows()
