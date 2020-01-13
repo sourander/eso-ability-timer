@@ -8,14 +8,16 @@ import numpy
 import argparse
 import datetime
 
+
 ap = argparse.ArgumentParser()
 ap.add_argument("-p", "--profile", required=True, 
-    help='Choose your profile. Available: StamDK, MagPlar') 
+    help='Choose your profile. Available: StamDK, MagPlar, MagDen, StamBlade') 
 ap.add_argument('--nographics', action='store_true', 
     help='Toggle the ability bars off. Just display the raw image.')
 ap.add_argument('--fullscreen', action='store_true', 
     help='Launch in full screen. Your monitor should have Full HD display resolution.')
 args = vars(ap.parse_args())
+
 
 if args["profile"] == "StamDK":
     SKILLS_BEING_TRACKED = {'images/cropped/ArrowBarrage.png': 10.0,
@@ -28,6 +30,18 @@ elif args["profile"] == "MagPlar":
                             'images/cropped/ChanneledAcceleration.png': 36.0}
 
     LONG_SKILLS = ['images/cropped/ChanneledAcceleration.png']
+
+elif args["profile"] == "MagDen":
+    SKILLS_BEING_TRACKED = {'images/cropped/GrippingShards.png': 12.0,
+                            'images/cropped/BlueBetty.png': 25.0}
+
+    LONG_SKILLS = ['images/cropped/BlueBetty.png']
+
+elif args["profile"] == "StamBlade":
+    SKILLS_BEING_TRACKED = {'images/cropped/LeechingStrikes.png': 10.0,
+                            'images/cropped/RaceAgainstTheTime.png': 12.0}
+
+    LONG_SKILLS = ['images/cropped/RaceAgainstTheTime.png']
 
 def skill_locations():
     # Set values from ESO UI. Offset is 64x64 box's width plus the 10px margin.
@@ -78,13 +92,18 @@ def compare_icons(bm_icons, query_icon):
             return i
     return None
 
-def load_query_icons():
+def load_query_icons(only_two_skills=None):
     # Reserve lists for query images and their paths
     query_icons = []
     query_paths = []
 
+    if only_two_skills is None:
+        paths = SKILLS_BEING_TRACKED.keys()
+    else:
+        paths = selected
+
     # Load all images from images/cropped/ and store them in lists
-    for path in SKILLS_BEING_TRACKED.keys():
+    for path in paths:
         
         # Load image and keep only Red channel
         query_icon = cv2.imread(path)
@@ -152,7 +171,12 @@ if __name__ == "__main__":
             bm_icons = crop_ability_icons(skill_coords, bm_capture)
 
             # Load query icons and their relative paths
-            query_icons, query_paths = load_query_icons()
+            # If both bar's have a knows index, search only from those slots
+            if upperbar.skillIndex is None or lowerbar.skillIndex is None:
+                query_icons, query_paths = load_query_icons()
+            else:
+                selected = [upperbar.skillPath, lowerbar.skillPath]
+                query_icons, query_paths = load_query_icons(only_two_skills=selected)
 
             # Loop queries and compare those to the icons in the image stream.
             for query_icon, query_path in zip(query_icons, query_paths):
