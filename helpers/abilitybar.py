@@ -21,15 +21,15 @@ class AbilityBar():
     def set_timer(self, path, index, duration):
         
         if self.skillPath is None:
-            print("This detected. Setting path as: ", path)
+            print("[INFO] Skill detected. Setting path as: ", path)
             self.skillPath = path
 
         if self.skillIndex is None:
-            print("with index as: ", index)
+            print("[INFO] with index as: ", index)
             self.skillIndex = index
 
         if self.skillDuration is None:
-            print("and duration as: ", duration)
+            print("[INFO] and duration as: ", duration)
             self.skillDuration = duration
         
         self.timeremaining = duration
