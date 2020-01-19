@@ -1,6 +1,6 @@
 
 # ESO ability timer
-Elder Scrolls Online Add-ons on PS4? Sure! This software mimics similar ability timer addons available on PC. It keeps track of when you have activated an ability and creates an animated bar based on the time data.
+Elder Scrolls Online Add-ons on PS4? Sure! This software mimics "ability timer" addons available on PC. It keeps track of when you have activated an ability and creates an animated bar based on the time data.
 
 **Important** The software works only on two skills per character profile.
 
