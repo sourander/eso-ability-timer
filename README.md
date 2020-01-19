@@ -25,7 +25,7 @@ Check the requirements section for other software.
 
 ```bash
 git clone https://github.com/sourander/eso-ability-timer.git
-pip install -r requirements
+pip install -r requirements.txt
 ```
 
 ## Usage
