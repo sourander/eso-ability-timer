@@ -10,7 +10,7 @@ import datetime
 
 
 ap = argparse.ArgumentParser()
-ap.add_argument("-p", "--profile", required=True, 
+ap.add_argument("-p", "--profile", 
     help='Choose your profile. Available: StamDK, MagPlar, MagDen, StamBlade') 
 ap.add_argument('--nographics', action='store_true', 
     help='Toggle the ability bars off. Just display the raw image.')

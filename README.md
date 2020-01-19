@@ -17,7 +17,7 @@ The software's core functionality is to grab a frame from gameplay, crop the abi
 
 ![Program's core logic](/images/readme-explanation.png)
 
-Assumed that you have a screenshot of the game taken at the moment when the ability icon is in its activated state, you can save the icon by modifying and running a helper script at tools/
+Assumed that you have a screenshot of the game taken at the moment when the ability icon is in its activated state, you can save the icon by modifying and running a helper script: *./tools/generate_crop_from_still.py*
 
 ## Installation
 
@@ -30,4 +30,20 @@ pip install -r requirements
 
 ## Usage
 
-Before using the script, you must the the capture.py's profiles. The dict SKILLS_BEING_TRACKED should always contain exactly two skills and their duration in seconds.
+Before using the script, you must configure the capture.py's profiles. Open the file in any text editor and change the values to your liking. The dict SKILLS_BEING_TRACKED should always contain exactly two skills and their duration in seconds. The abilitys location in the ability bar (*index*) is detected automatically.
+
+When the setup is done, you can launch the software using various parameters. I recommend checking that the ffmpeg pipe is set up correctly by running the software with **--nographics** parameter. This will pass the grabbed image to OpenCV's imshow function without drawing any graphics or without performing any icon comparisons.
+
+```bash
+python capture.py --nographics
+```
+
+Assuming that the command above worked, you can exit the software by pressing 'Q' button on your keyboard.
+
+To launch the software with a profile that you have set in capture.py, type
+
+```bash
+python capture.py --profile ProfileName
+
+# e.g. python capture.py --profile StamDK 
+```
