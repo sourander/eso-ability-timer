@@ -47,3 +47,5 @@ python capture.py --profile ProfileName
 
 # e.g. python capture.py --profile StamDK 
 ```
+
+By default, the software launches in windowed mode. If you are running a 1920x1080 monitor, you can run it in full screen by adding a parameter **--fullscreen**. Note that this does not scale the image. If you are running some other resolution, such as 2560x1440, the image will be in the top-left corner. Change your monitor to 1920x1080.
