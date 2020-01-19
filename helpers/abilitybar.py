@@ -13,10 +13,10 @@ class AbilityBar():
         self.timeremaining = None
 
         # Set bar graph info
-        self.bar_max_lenght = 600
+        self.bar_max_lenght = 400
         self.bar_color = (255, 255, 255)
-        self.startXY = (660, 815)
-        self.endXY = (1260, 820)
+        self.startXY = (260, 805)
+        self.endXY = (660, 825)
 
     def set_timer(self, path, index, duration):
         
@@ -40,13 +40,18 @@ class AbilityBar():
 
 
     def _get_bar(self, flicker):
+        # Calculate the lenght
         lenght = int(self.bar_max_lenght * (self.timeremaining / self.skillDuration))
+        
+        # Set default colors for the bar graph
         color = self.bar_color
+        out_color = self.bar_color
 
+        # Set the inner color to flicker color, if enabled.
         if flicker and lenght < 150 and (lenght % 10) == 0:
-            return lenght, self.flicker_color
+            return lenght, self.flicker_color, out_color
 
-        return lenght, color
+        return lenght, color, out_color
 
     def active(self):
         if self.timeremaining is not None:
@@ -57,7 +62,7 @@ class AbilityBar():
 
     def draw_bar(self, bm_capture, flicker=False):
         # Get bar lenght and color
-        lenght, color = self._get_bar(flicker)
+        lenght, color, out_color = self._get_bar(flicker)
         
         # Get values for readability reasons
         startXY = self.startXY
@@ -67,7 +72,7 @@ class AbilityBar():
         endVals = (startXY[0] + lenght, endXY[1])
 
         # Draw outer border
-        cv2.rectangle(bm_capture, startXY, endXY, color, thickness=1)
+        cv2.rectangle(bm_capture, startXY, endXY, out_color, thickness=1)
         
         # Draw inner bar
         cv2.rectangle(bm_capture, startXY, endVals, color, thickness=-1)
@@ -82,8 +87,8 @@ class LongAbilityBar(AbilityBar):
         # Add own spices
         self.bar_color = (0, 255, 255)
         self.flicker_color = (0, 0, 255)
-        self.startXY = (660, 835)
-        self.endXY = (1260, 840)
+        self.startXY = (260, 835)
+        self.endXY = (660, 855)
 
 
 

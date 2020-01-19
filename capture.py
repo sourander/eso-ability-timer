@@ -27,9 +27,9 @@ if args["profile"] == "StamDK":
 
 elif args["profile"] == "MagPlar":
     SKILLS_BEING_TRACKED = {'images/cropped/UnstableWallOfElements.png': 10.0,
-                            'images/cropped/ChanneledAcceleration.png': 36.0}
+                            'images/cropped/ChanneledFocus.png': 20.0}
 
-    LONG_SKILLS = ['images/cropped/ChanneledAcceleration.png']
+    LONG_SKILLS = ['images/cropped/ChanneledFocus.png']
 
 elif args["profile"] == "MagDen":
     SKILLS_BEING_TRACKED = {'images/cropped/GrippingShards.png': 12.0,
@@ -42,6 +42,15 @@ elif args["profile"] == "StamBlade":
                             'images/cropped/RaceAgainstTheTime.png': 12.0}
 
     LONG_SKILLS = ['images/cropped/RaceAgainstTheTime.png']
+
+elif args["profile"] == "StamCro":
+    SKILLS_BEING_TRACKED = {'images/cropped/ArrowBarrage.png': 10.0,
+                            'images/cropped/SkeletalArcher.png': 16.0}
+
+    LONG_SKILLS = ['images/cropped/SkeletalArcher.png']
+
+else:
+    print("[WARNING] You are not using ANY profile.")
 
 def skill_locations():
     # Set values from ESO UI. Offset is 64x64 box's width plus the 10px margin.
