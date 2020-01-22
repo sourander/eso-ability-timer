@@ -1,5 +1,14 @@
 MIT License
 
+This license EXCLUDES the data inside the inside/icons/ directory. The directory
+contains game ability icons from Elder Scrolls Online. The copyright of those
+files belongs to ZeniMax Online Studios. Files are hosted inside this project
+since that data is required for icon recognition. Is asked by ZeniMax, I will
+remove the images are each end user has to obtain their own copies of those 
+icons.
+
+For the code, the copyright is as reads below.
+
 Copyright (c) 2020 sourander
 
 Permission is hereby granted, free of charge, to any person obtaining a copy

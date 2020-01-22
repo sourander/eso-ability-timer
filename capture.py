@@ -25,6 +25,13 @@ if args["profile"] == "StamDK":
 
     LONG_SKILLS = ['images/cropped/BarbedTrap.png']
 
+elif args["profile"] == "TankDK":
+    SKILLS_BEING_TRACKED = {'images/cropped/BlockadeOfStorms.png': 14.0,
+                            'images/cropped/Balance.png': 30.0,
+                            'images/cropped/BlockadeOfFrost.png': 14.0}
+
+    LONG_SKILLS = ['images/cropped/Balance.png']
+
 elif args["profile"] == "MagPlar":
     SKILLS_BEING_TRACKED = {'images/cropped/UnstableWallOfElements.png': 10.0,
                             'images/cropped/ChanneledFocus.png': 20.0}
