@@ -79,23 +79,30 @@ class AbilityBar():
 
         return bm_capture
 
-class LongAbilityBar(AbilityBar):
-    def __init__(self):
+class LaAbilityBar(AbilityBar):
+    def __init__(self, gdc=1.0):
         # Initialize with superclass's values
         super().__init__()
 
         # Add own spices
-        self.bar_color = (0, 255, 255)
+        self.bar_color = (255, 255, 255)
         self.flicker_color = (0, 0, 255)
-        self.startXY = (260, 835)
-        self.endXY = (660, 855)
+        self.startXY = (260, 865)
+        self.endXY = (660, 885)
 
+        # Global cooldown
+        self.gdc = gdc
+
+    def set_la_timer(self):
+        self.timeremaining = self.gdc
 
 
 if __name__ == "__main__":
     print("Welcome to the testing area!")
     upperbar = AbilityBar()
     lowerbar = LongAbilityBar()
+    lightatt_bar = LaAbilityBar(gdc=1.0)
 
     upperbar.set_timer("Parent_path", 1, 10.0)
     lowerbar.set_timer("Child path", 2, 20.0)
+    lightatt_bar.set_la_timer()

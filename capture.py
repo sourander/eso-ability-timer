@@ -19,24 +19,18 @@ ap.add_argument('--fullscreen', action='store_true',
 args = vars(ap.parse_args())
 
 
-if args["profile"] == "StamDK":
-    SKILLS_BEING_TRACKED = {'images/cropped/ArrowBarrage.png': 10.0,
-                            'images/cropped/BarbedTrap.png': 18.0}
-
-    LONG_SKILLS = ['images/cropped/BarbedTrap.png']
-
-elif args["profile"] == "TankDK":
+if args["profile"] == "TankDK":
     SKILLS_BEING_TRACKED = {'images/cropped/BlockadeOfStorms.png': 14.0,
-                            'images/cropped/Balance.png': 30.0,
+                            'images/cropped/Balance.png': 25.0,
                             'images/cropped/BlockadeOfFrost.png': 14.0}
 
     LONG_SKILLS = ['images/cropped/Balance.png']
 
 elif args["profile"] == "MagPlar":
     SKILLS_BEING_TRACKED = {'images/cropped/UnstableWallOfElements.png': 10.0,
-                            'images/cropped/ChanneledFocus.png': 20.0}
+                            'images/cropped/BarbedTrap.png': 18.0}
 
-    LONG_SKILLS = ['images/cropped/ChanneledFocus.png']
+    LONG_SKILLS = ['images/cropped/BarbedTrap.png']
 
 elif args["profile"] == "MagDen":
     SKILLS_BEING_TRACKED = {'images/cropped/GrippingShards.png': 12.0,
@@ -51,7 +45,13 @@ elif args["profile"] == "StamBlade":
     LONG_SKILLS = ['images/cropped/RaceAgainstTheTime.png']
 
 elif args["profile"] == "StamCro":
-    SKILLS_BEING_TRACKED = {'images/cropped/ArrowBarrage.png': 10.0,
+    SKILLS_BEING_TRACKED = {'images/cropped/EndlessHail.png': 14.0,
+                            'images/cropped/BarbedTrap.png': 18.0}
+
+    LONG_SKILLS = ['images/cropped/BarbedTrap.png']
+
+elif args["profile"] == "BowCro":
+    SKILLS_BEING_TRACKED = {'images/cropped/EndlessHail.png': 14.0,
                             'images/cropped/SkeletalArcher.png': 16.0}
 
     LONG_SKILLS = ['images/cropped/SkeletalArcher.png']
@@ -113,10 +113,14 @@ def load_query_icons(only_two_skills=None):
     query_icons = []
     query_paths = []
 
+    # Either go through all skills in SKILLS_BEING_TRACKED
+    # Or use the ones already set in both Ability bars.
+    # This is useful e.g. if using both lightning and ice staves
+    # on a tank in different content.
     if only_two_skills is None:
         paths = SKILLS_BEING_TRACKED.keys()
     else:
-        paths = selected
+        paths = only_two_skills
 
     # Load all images from images/cropped/ and store them in lists
     for path in paths:
@@ -159,6 +163,7 @@ if __name__ == "__main__":
         upperbar = AbilityBar()
         lowerbar = LongAbilityBar()
 
+
     if args['fullscreen']:
         cv2.namedWindow('ElderSCrollsOnline', cv2.WINDOW_FREERATIO)
         cv2.setWindowProperty('ElderSCrollsOnline', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
@@ -188,8 +193,11 @@ if __name__ == "__main__":
 
             # Load query icons and their relative paths
             # If both bar's have a knows index, search only from those slots
-            if upperbar.skillIndex is None or lowerbar.skillIndex is None:
+            if  None in [upperbar.skillIndex, lowerbar.skillIndex]:
                 query_icons, query_paths = load_query_icons()
+            elif None not in [upperbar.skillIndex, lowerbar.skillIndex]:
+                # Both icons and their indicies have been loaded. No need for disk IO.
+                pass
             else:
                 selected = [upperbar.skillPath, lowerbar.skillPath]
                 query_icons, query_paths = load_query_icons(only_two_skills=selected)
