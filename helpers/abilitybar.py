@@ -79,22 +79,36 @@ class AbilityBar():
 
         return bm_capture
 
+
+class LongAbilityBar(AbilityBar):
+    def __init__(self):
+        # Initialize with superclass's values
+        super().__init__()
+
+        # Add own spices
+        self.bar_color = (0, 255, 255)
+        self.flicker_color = (0, 0, 255)
+        self.startXY = (260, 835)
+        self.endXY = (660, 855)
+
+
 class LaAbilityBar(AbilityBar):
-    def __init__(self, gdc=1.0):
+    def __init__(self):
         # Initialize with superclass's values
         super().__init__()
 
         # Add own spices
         self.bar_color = (255, 255, 255)
         self.flicker_color = (0, 0, 255)
-        self.startXY = (260, 865)
-        self.endXY = (660, 885)
+        self.startXY = (760, 150)
+        self.endXY = (1160, 170)
 
         # Global cooldown
-        self.gdc = gdc
+        self.skillDuration = 0.9
 
     def set_la_timer(self):
-        self.timeremaining = self.gdc
+        self.timeremaining = self.skillDuration
+
 
 
 if __name__ == "__main__":

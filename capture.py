@@ -2,9 +2,10 @@ from skimage.metrics import structural_similarity as ssim
 from imutils import paths
 from helpers.abilitybar import AbilityBar
 from helpers.abilitybar import LongAbilityBar
+from helpers.abilitybar import LaAbilityBar
 import subprocess as sp
 import cv2
-import numpy
+import numpy as np
 import argparse
 import datetime
 
@@ -77,12 +78,30 @@ def skill_locations():
     return skills
 
 
+def strip_locations():
+    # Set values from ESO UI. Offset is 64x64 box's width plus the 10px margin.
+    OFFSET = 64 + 10
+    CROPSIZE = 60
+    V_CROPSIZE = 4
+
+    # Reserve a dictionary for skill xy coords
+    skills = {}
+
+    # Calculate xy-coordinates of the skill icons
+    for i in range(0,5):
+        yStart, yEnd = 983, 983 + V_CROPSIZE
+        xStart = 790 + (i * OFFSET)
+        xEnd = xStart + CROPSIZE
+        skills[i+1] = (yStart, yEnd, xStart, xEnd)
+
+    return skills
+
 def blackmagic_image():
     # Capture data from pipe
     raw_image = pipe.stdout.read(1920*1080*3)
 
     # transform the raw data into a numpy array
-    image =  numpy.fromstring(raw_image, dtype='uint8')
+    image =  np.fromstring(raw_image, dtype='uint8')
 
     # Reshape to Full HD
     image = image.reshape((1080,1920,3))
@@ -90,13 +109,17 @@ def blackmagic_image():
     return image
 
 
-def crop_ability_icons(skill_coords, image):
+def crop_ability_icons(skill_coords, image, bgr=False):
     bm_crops = []
 
     for i in skill_coords.keys():
         (yStart, yEnd, xStart, xEnd) = skill_coords[i]
         crop = image[yStart:yEnd, xStart:xEnd]
-        _,_,crop = cv2.split(crop)
+        
+        # BGR channels not wanted, keep only R. 
+        if not bgr:
+            _,_,crop = cv2.split(crop)
+        
         bm_crops.append(crop)
 
     return bm_crops
@@ -107,6 +130,28 @@ def compare_icons(bm_icons, query_icon):
         if ss > 0.80:
             return i
     return None
+
+def analyse_icon(bm_icon_tops, verbose=False):
+    # Similar to compare icons, but finds out if a skill
+    # has been activated without caring what the actual skill
+    # is. Reasoning: if a skill has been activated, we must
+    # be interested in global cooldown metronome. 
+    LA_FOUND = False
+
+    for i, icon in enumerate(bm_icon_tops, start=1):
+        feature = cv2.mean(icon)
+        
+        hsv = cv2.cvtColor(icon, cv2.COLOR_BGR2HSV)
+        feature = np.array(cv2.mean(hsv)[:3]).astype(int)
+
+        # These HSV values correspond to the yellow glow around
+        # an activated skill icon
+        ICON = [24, 180, 175]
+        dist = np.linalg.norm(feature - ICON)
+
+        if dist < 25:
+            LA_FOUND = True
+    return LA_FOUND
 
 def load_query_icons(only_two_skills=None):
     # Reserve lists for query images and their paths
@@ -158,10 +203,12 @@ if __name__ == "__main__":
     if not args['nographics']:
         # Dictionary for skills[i] = (yStart, yEnd, xStart, xEnd)
         skill_coords = skill_locations()
+        skill_tops_coords = strip_locations()
 
         # Instanciate ability bars.
         upperbar = AbilityBar()
         lowerbar = LongAbilityBar()
+        lightatt_bar = LaAbilityBar()
 
 
     if args['fullscreen']:
@@ -215,6 +262,17 @@ if __name__ == "__main__":
                         upperbar.set_timer(query_path, matched_idx, SKILLS_BEING_TRACKED[query_path])
 
 
+        # Crop strips and compare their HSV values to the values set in analyse_icon()
+        if not args['nographics']:
+            bm_icon_tops = crop_ability_icons(skill_tops_coords, bm_capture, bgr=True)
+
+            ANY_SKILL_PRESSED = analyse_icon(bm_icon_tops, verbose=False)
+
+            if ANY_SKILL_PRESSED:
+                print("Setting timer")
+                lightatt_bar.set_la_timer()
+
+
         """
         DISPLAY IMAGES
         """
@@ -230,6 +288,8 @@ if __name__ == "__main__":
                 if lowerbar.active():
                     bm_capture = lowerbar.draw_bar(bm_capture, flicker=True)
 
+                if lightatt_bar.active():
+                    bm_capture = lightatt_bar.draw_bar(bm_capture)
             
             # Draw image on screen
             cv2.imshow('ElderSCrollsOnline', bm_capture)
@@ -253,6 +313,9 @@ if __name__ == "__main__":
 
             if lowerbar.active():
                 lowerbar.reduce_time(deltaTime)
+
+            if lightatt_bar.active():
+                lightatt_bar.reduce_time(deltaTime)
 
 
     # Empty pipe read
