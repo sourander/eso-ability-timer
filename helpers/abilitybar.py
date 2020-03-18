@@ -104,7 +104,7 @@ class LaAbilityBar(AbilityBar):
         self.endXY = (1160, 170)
 
         # Global cooldown
-        self.skillDuration = 0.9
+        self.skillDuration = 0.95
 
     def set_la_timer(self):
         self.timeremaining = self.skillDuration
@@ -115,7 +115,7 @@ if __name__ == "__main__":
     print("Welcome to the testing area!")
     upperbar = AbilityBar()
     lowerbar = LongAbilityBar()
-    lightatt_bar = LaAbilityBar(gdc=1.0)
+    lightatt_bar = LaAbilityBar()
 
     upperbar.set_timer("Parent_path", 1, 10.0)
     lowerbar.set_timer("Child path", 2, 20.0)

@@ -1,5 +1,6 @@
 from skimage.metrics import structural_similarity as ssim
 from imutils import paths
+from imutils.video import FPS
 from helpers.abilitybar import AbilityBar
 from helpers.abilitybar import LongAbilityBar
 from helpers.abilitybar import LaAbilityBar
@@ -12,11 +13,13 @@ import datetime
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-p", "--profile", 
-    help='Choose your profile. Available: StamDK, MagPlar, MagDen, StamBlade') 
+    help='Choose your profile. Available: TankDK, MagPlar, MagDen, StamBlade, StamCro, BowCro') 
 ap.add_argument('--nographics', action='store_true', 
-    help='Toggle the ability bars off. Just display the raw image.')
+    help='Toggle the ability bars off. Just display the raw input image.')
 ap.add_argument('--fullscreen', action='store_true', 
-    help='Launch in full screen. Your monitor should have Full HD display resolution.')
+    help='Launch in full screen. Your monitor should have Full HD display resolution for this to function correctly.')
+ap.add_argument('--fps', action='store_true', 
+    help='Turn FPS calculations ON.')
 args = vars(ap.parse_args())
 
 
@@ -77,20 +80,18 @@ def skill_locations():
 
     return skills
 
-
 def strip_locations():
     # Set values from ESO UI. Offset is 64x64 box's width plus the 10px margin.
     OFFSET = 64 + 10
-    CROPSIZE = 60
-    V_CROPSIZE = 4
+    CROPSIZE = 67
 
     # Reserve a dictionary for skill xy coords
     skills = {}
 
     # Calculate xy-coordinates of the skill icons
     for i in range(0,5):
-        yStart, yEnd = 983, 983 + V_CROPSIZE
-        xStart = 790 + (i * OFFSET)
+        yStart, yEnd = 982, 984
+        xStart = 786 + (i * OFFSET)
         xEnd = xStart + CROPSIZE
         skills[i+1] = (yStart, yEnd, xStart, xEnd)
 
@@ -107,7 +108,6 @@ def blackmagic_image():
     image = image.reshape((1080,1920,3))
 
     return image
-
 
 def crop_ability_icons(skill_coords, image, bgr=False):
     bm_crops = []
@@ -131,7 +131,7 @@ def compare_icons(bm_icons, query_icon):
             return i
     return None
 
-def analyse_icon(bm_icon_tops, verbose=False):
+def analyse_icon(bm_icon_tops, threshold=20, verbose=False):
     # Similar to compare icons, but finds out if a skill
     # has been activated without caring what the actual skill
     # is. Reasoning: if a skill has been activated, we must
@@ -144,13 +144,21 @@ def analyse_icon(bm_icon_tops, verbose=False):
         hsv = cv2.cvtColor(icon, cv2.COLOR_BGR2HSV)
         feature = np.array(cv2.mean(hsv)[:3]).astype(int)
 
+        # Let's half the saturation and value to reduce their weight on euclidean distance.
+        feature[1] = feature[1] // 2
+        feature[2] = feature[2] // 2
+
         # These HSV values correspond to the yellow glow around
         # an activated skill icon
-        ICON = [24, 180, 175]
-        dist = np.linalg.norm(feature - ICON)
+        ICON = [42, 120, 90]
+        dist = np.linalg.norm(feature - ICON).astype(int)
 
-        if dist < 25:
+        if verbose and dist < threshold:
+            print(f"[INFO] Slot {i}, feature: {feature}, dist: {dist}")
+
+        if dist < threshold:
             LA_FOUND = True
+    
     return LA_FOUND
 
 def load_query_icons(only_two_skills=None):
@@ -211,17 +219,22 @@ if __name__ == "__main__":
         lightatt_bar = LaAbilityBar()
 
 
+    # Load the initial query icons and paths. ALL of these
+    # will be compared to slots 1-5 before the set_timer()
+    # has been run on 1 long and 1 short skill
+    query_icons, query_paths = load_query_icons()
+    selected = None
+
     if args['fullscreen']:
         cv2.namedWindow('ElderSCrollsOnline', cv2.WINDOW_FREERATIO)
         cv2.setWindowProperty('ElderSCrollsOnline', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
+    if args['fps']:
+        fps = FPS().start()
+
     # Main loop
     while True:
         
-        """
-        LOAD IMAGES
-        """
-
         if not args['nographics']:
             # Get time for deltaTime calculations
             start = datetime.datetime.now()
@@ -232,23 +245,21 @@ if __name__ == "__main__":
         # Empty pipe read
         pipe.stdout.flush()
 
-
-        # Crop icons and compare those to the saved images.
-        # Unless --nographics parameter has been used
+        # Crop icons from the BlackMagic source
         if not args['nographics']:
             bm_icons = crop_ability_icons(skill_coords, bm_capture)
 
-            # Load query icons and their relative paths
-            # If both bar's have a knows index, search only from those slots
-            if  None in [upperbar.skillIndex, lowerbar.skillIndex]:
-                query_icons, query_paths = load_query_icons()
-            elif None not in [upperbar.skillIndex, lowerbar.skillIndex]:
-                # Both icons and their indicies have been loaded. No need for disk IO.
-                pass
-            else:
-                selected = [upperbar.skillPath, lowerbar.skillPath]
-                query_icons, query_paths = load_query_icons(only_two_skills=selected)
+            # Try to select only two abilities to boost performance 
+            # in a situation where len(SKILLS_BEING_TRACKED) > 2
+            if  selected == None:
+                if None not in [upperbar.skillPath, lowerbar.skillPath]:
+                    # Load query icons and paths again.
+                    # If e.g. lightning and ice staff abilities are both in
+                    # SKILLS_BEING_TRACKED, one is now dropped out.
+                    selected = [upperbar.skillPath, lowerbar.skillPath]
+                    query_icons, query_paths = load_query_icons(only_two_skills=selected)
 
+                            
             # Loop queries and compare those to the icons in the image stream.
             for query_icon, query_path in zip(query_icons, query_paths):
 
@@ -278,9 +289,7 @@ if __name__ == "__main__":
         """
 
         if bm_capture is not None:
-
             # Update graphics bars
-            # Unless --nographics parameter has been used
             if not args['nographics']:
                 if upperbar.active():
                     bm_capture = upperbar.draw_bar(bm_capture)
@@ -317,7 +326,19 @@ if __name__ == "__main__":
             if lightatt_bar.active():
                 lightatt_bar.reduce_time(deltaTime)
 
+        if args['fps']:
+            fps = FPS().start()
 
+
+    """
+    PERFORM CLEANUP
+    """
+
+    if args['fps']:
+        fps.stop()
+        print("[INFO] elasped time: {:.2f}".format(fps.elapsed()))
+        print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
+    
     # Empty pipe read
     pipe.stdout.flush()
     cv2.destroyAllWindows()
