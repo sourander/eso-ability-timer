@@ -104,7 +104,7 @@ class LaAbilityBar(AbilityBar):
         self.endXY = (1160, 170)
 
         # Global cooldown
-        self.skillDuration = 0.95
+        self.skillDuration = 0.8
 
     def set_la_timer(self):
         self.timeremaining = self.skillDuration

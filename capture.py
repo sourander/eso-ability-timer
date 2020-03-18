@@ -62,6 +62,8 @@ elif args["profile"] == "BowCro":
 
 else:
     print("[WARNING] You are not using ANY profile.")
+    SKILLS_BEING_TRACKED = None
+    LONG_SKILLS = None
 
 def skill_locations():
     # Set values from ESO UI. Offset is 64x64 box's width plus the 10px margin.
@@ -131,7 +133,7 @@ def compare_icons(bm_icons, query_icon):
             return i
     return None
 
-def analyse_icon(bm_icon_tops, threshold=20, verbose=False):
+def analyse_icon(bm_icon_tops, threshold=15, verbose=False):
     # Similar to compare icons, but finds out if a skill
     # has been activated without caring what the actual skill
     # is. Reasoning: if a skill has been activated, we must
@@ -146,11 +148,11 @@ def analyse_icon(bm_icon_tops, threshold=20, verbose=False):
 
         # Let's half the saturation and value to reduce their weight on euclidean distance.
         feature[1] = feature[1] // 2
-        feature[2] = feature[2] // 2
+        feature[2] = feature[2] // 4
 
         # These HSV values correspond to the yellow glow around
         # an activated skill icon
-        ICON = [42, 120, 90]
+        ICON = [24, 80, 35]
         dist = np.linalg.norm(feature - ICON).astype(int)
 
         if verbose and dist < threshold:
@@ -222,8 +224,9 @@ if __name__ == "__main__":
     # Load the initial query icons and paths. ALL of these
     # will be compared to slots 1-5 before the set_timer()
     # has been run on 1 long and 1 short skill
-    query_icons, query_paths = load_query_icons()
-    selected = None
+    if not args['nographics']:
+        query_icons, query_paths = load_query_icons()
+        selected = None
 
     if args['fullscreen']:
         cv2.namedWindow('ElderSCrollsOnline', cv2.WINDOW_FREERATIO)
@@ -280,7 +283,6 @@ if __name__ == "__main__":
             ANY_SKILL_PRESSED = analyse_icon(bm_icon_tops, verbose=False)
 
             if ANY_SKILL_PRESSED:
-                print("Setting timer")
                 lightatt_bar.set_la_timer()
 
 
@@ -327,7 +329,7 @@ if __name__ == "__main__":
                 lightatt_bar.reduce_time(deltaTime)
 
         if args['fps']:
-            fps = FPS().start()
+            fps.update()
 
 
     """
